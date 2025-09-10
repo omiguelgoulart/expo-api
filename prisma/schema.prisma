@@ -1,0 +1,77 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  senha     String
+
+  @@map("usuarios")
+}
+
+model Comanda {
+  id         Int        @id @default(autoincrement())
+  numero     Int
+  data       DateTime      @default(now())
+  status     StatusComanda @default(ABERTA)
+
+  pedidos    PedidoItem[]
+
+  @@unique([numero, data]) // 🔑 necessário para usar .upsert corretamente
+  @@map("comandas")
+}
+
+model Item {
+  codigo   Int     @id @default(autoincrement())
+  nome     String
+  tipo     TipoItem
+  preco    Float      // Preço padrão sugerido (pode ser ignorado no lançamento)
+  ativo    Boolean    @default(true)
+
+  pedidos  PedidoItem[]
+
+  @@map("itens")
+}
+
+model PedidoItem {
+  id             String    @id @default(uuid())
+  comanda        Comanda   @relation(fields: [comandaId], references: [id])
+  comandaId      Int
+
+  item           Item      @relation(fields: [itemId], references: [codigo])
+  itemId         Int
+
+  quantidade     Float
+  precoUnitario  Float
+  subtotal       Float
+
+  @@unique([comandaId, itemId]) // 🔑 necessário para usar .upsert corretamente
+  @@map("pedido_itens")
+}
+
+enum TipoItem {
+  REFEICAO_PESO   // exemplo: R$ 49,00/kg
+  REFEICAO_FIXO   // exemplo: R$ 49,00 por pessoa
+  SOBREMESA
+  SUCO
+  PAO
+  OUTRO
+}
+
+enum StatusComanda {
+  ABERTA
+  FECHADA
+}
