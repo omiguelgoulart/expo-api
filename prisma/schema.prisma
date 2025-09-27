@@ -22,56 +22,75 @@ model Usuario {
   @@map("usuarios")
 }
 
-model Comanda {
-  id         Int        @id @default(autoincrement())
-  numero     Int
-  data       DateTime      @default(now())
-  status     StatusComanda @default(ABERTA)
-
-  pedidos    PedidoItem[]
-
-  @@unique([numero, data]) // 🔑 necessário para usar .upsert corretamente
-  @@map("comandas")
-}
-
-model Item {
-  codigo   Int     @id @default(autoincrement())
-  nome     String
-  tipo     TipoItem
-  preco    Float      // Preço padrão sugerido (pode ser ignorado no lançamento)
-  ativo    Boolean    @default(true)
-
-  pedidos  PedidoItem[]
-
-  @@map("itens")
-}
-
-model PedidoItem {
-  id             String    @id @default(uuid())
-  comanda        Comanda   @relation(fields: [comandaId], references: [id])
-  comandaId      Int
-
-  item           Item      @relation(fields: [itemId], references: [codigo])
-  itemId         Int
-
-  quantidade     Float
-  precoUnitario  Float
-  subtotal       Float
-
-  @@unique([comandaId, itemId]) // 🔑 necessário para usar .upsert corretamente
-  @@map("pedido_itens")
-}
-
-enum TipoItem {
-  REFEICAO_PESO   // exemplo: R$ 49,00/kg
-  REFEICAO_FIXO   // exemplo: R$ 49,00 por pessoa
-  SOBREMESA
-  SUCO
-  PAO
-  OUTRO
-}
-
 enum StatusComanda {
   ABERTA
   FECHADA
+  CANCELADA
+  PENDENTE
+}
+
+model Categoria {
+  id        Int       @id @default(autoincrement())
+  nome      String    @unique
+  descricao String?
+
+  produtos Produto[] @relation("CategoriaProdutos")
+
+  @@map("categorias")
+}
+
+model Produto { 
+  id          Int     @id @default(autoincrement())
+  nome        String
+  descricao   String?
+  preco       Decimal @db.Decimal(10, 2)
+  estoque     Int     @default(0)
+  ativo       Boolean @default(true)
+  imagem      String?
+
+  // FK para Categoria
+  categoriaId Int
+  categoria   Categoria @relation("CategoriaProdutos", fields: [categoriaId], references: [id])
+
+  // Novo Relacionamento com PedidoItem
+  itensPedidos PedidoItem[]
+  
+  // Se quiser tipagem de Item, pode adicionar um campo 'tipo' aqui
+  tipo_item String? @default("REFEICAO_FIXO") // Ex: REFEICAO_PESO, SUCO, ETC.
+  
+  @@map("produtos")
+}
+
+
+model Comanda {
+  id          Int           @id @default(autoincrement())
+  numero      Int           @unique // Melhor se for único globalmente
+  data        DateTime      @default(now())
+  status      StatusComanda @default(ABERTA)
+
+  // Agora liga a Produtos através de PedidoItem
+  pedidos     PedidoItem[]
+
+  @@map("comandas")
+}
+
+
+model PedidoItem { // Renomeada para ItemComanda, ligada a Produto
+  id              String      @id @default(uuid())
+  
+  // Relacionamento com Comanda
+  comanda         Comanda     @relation(fields: [comandaId], references: [id])
+  comandaId       Int
+
+  // Relacionamento com Produto (Onde está o item vendido)
+  produto         Produto     @relation(fields: [produtoId], references: [id])
+  produtoId       Int
+
+  quantidade      Decimal   @db.Decimal(10, 2) // Usar Decimal/Float com precisão controlada
+  precoUnitario   Decimal   @db.Decimal(10, 2)
+  subtotal        Decimal   @db.Decimal(10, 2)
+  observacoes     String?  
+
+  
+  @@map("pedido_itens")
 }
