@@ -3,6 +3,7 @@ import categoriaRoutes from './routes/categorias';
 
 import usuarioRoutes from './routes/usuarios';
 import loginRoutes from './routes/login';
+import produtoRoutes from './routes/produtos';
 import cors from 'cors';
 
 
@@ -20,6 +21,8 @@ app.get('/', (req, res) => {
 app.use('/login', loginRoutes);
 app.use('/usuario', usuarioRoutes);
 app.use('/categoria', categoriaRoutes);
+app.use('/produto', produtoRoutes);
+
 
 const PORT = process.env.PORT || 3003;
 app.listen(PORT, () => {
