@@ -1,7 +1,6 @@
 import express from 'express';
-import itemComandaRoutes from './routes/pedidoItens';
-import comandaRoutes from './routes/comandas';
-import pedidoRoutes from './routes/categorias';
+import categoriaRoutes from './routes/categorias';
+
 import usuarioRoutes from './routes/usuarios';
 import loginRoutes from './routes/login';
 import cors from 'cors';
@@ -20,10 +19,7 @@ app.get('/', (req, res) => {
 
 app.use('/login', loginRoutes);
 app.use('/usuario', usuarioRoutes);
-app.use('/itens', itemComandaRoutes);
-app.use('/itens', itemComandaRoutes);
-app.use('/comandas', comandaRoutes);
-app.use('/pedidos', pedidoRoutes);
+app.use('/categoria', categoriaRoutes);
 
 const PORT = process.env.PORT || 3003;
 app.listen(PORT, () => {
