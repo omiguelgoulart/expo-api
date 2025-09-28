@@ -4,6 +4,9 @@ import categoriaRoutes from './routes/categorias';
 import usuarioRoutes from './routes/usuarios';
 import loginRoutes from './routes/login';
 import produtoRoutes from './routes/produtos';
+import pedidoRoutes from './routes/pedidoItens';
+import comandaRoutes from './routes/comandas';
+
 import cors from 'cors';
 
 
@@ -22,6 +25,8 @@ app.use('/login', loginRoutes);
 app.use('/usuario', usuarioRoutes);
 app.use('/categoria', categoriaRoutes);
 app.use('/produto', produtoRoutes);
+app.use('/pedido', pedidoRoutes);
+app.use('/comanda', comandaRoutes);
 
 
 const PORT = process.env.PORT || 3003;

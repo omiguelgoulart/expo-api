@@ -86,9 +86,9 @@ model PedidoItem { // Renomeada para ItemComanda, ligada a Produto
   produto         Produto     @relation(fields: [produtoId], references: [id])
   produtoId       Int
 
-  quantidade      Decimal   @db.Decimal(10, 2) // Usar Decimal/Float com precisão controlada
-  precoUnitario   Decimal   @db.Decimal(10, 2)
-  subtotal        Decimal   @db.Decimal(10, 2)
+  quantidade      Decimal?   @db.Decimal(10, 2) // Usar Decimal/Float com precisão controlada
+  precoUnitario   Decimal?   @db.Decimal(10, 2)
+  subtotal        Decimal?   @db.Decimal(10, 2)
   observacoes     String?  
 
   
