@@ -14,7 +14,9 @@ const comandaSchema = z.object({
 // rota get
 router.get("/", async (req, res) => {
     try {
-        const comandas = await prisma.comanda.findMany()
+        const comandas = await prisma.comanda.findMany({
+            include: { pedidos: { include: { produto: true } } }
+        })
         res.json(comandas)
     } catch (error) {
         res.status(500).json({ error: "Erro ao buscar comandas." })
