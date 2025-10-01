@@ -7,7 +7,7 @@ const prisma = new PrismaClient()
 const router = Router()
 
 const comandaSchema = z.object({
-   numero: z.string().min(1, "Identificador é obrigatório"),
+   numero: z.string().min(1, "Identificador é obrigatório!!"),
    data: z.string().optional(),
    status: z.enum(['ABERTA', 'FECHADA', 'CANCELADA', 'PENDENTE']).default('ABERTA').optional(),
 })
