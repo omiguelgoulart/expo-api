@@ -27,12 +27,12 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
     try {
         const parsedData = comandaSchema.parse(req.body)
-        // converte 'numero' para number
+        // valida que 'numero' é uma string não vazia
         const comandaData = {
             ...parsedData,
-            numero: Number(parsedData.numero)
+            numero: parsedData.numero
         }
-        if (Number.isNaN(comandaData.numero)) {
+        if (!comandaData.numero || typeof comandaData.numero !== "string") {
             return res.status(400).json({ message: "Número inválido." })
         }
         const novaComanda = await prisma.comanda.create({

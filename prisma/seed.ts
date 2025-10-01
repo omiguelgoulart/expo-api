@@ -118,19 +118,19 @@ async function main() {
 
   // 4. Criar comandas
   const comanda1 = await prisma.comanda.create({
-    data: { numero: 201, status: "ABERTA" },
+    data: { numero: "201", status: "ABERTA" },
   })
 
   const comanda2 = await prisma.comanda.create({
-    data: { numero: 202, status: "PENDENTE" },
+    data: { numero: "202", status: "PENDENTE" },
   })
 
   const comanda3 = await prisma.comanda.create({
-    data: { numero: 203, status: "FECHADA" },
+    data: { numero: "203", status: "FECHADA" },
   })
 
   const comanda4 = await prisma.comanda.create({
-    data: { numero: 204, status: "CANCELADA" },
+    data: { numero: "204", status: "CANCELADA" },
   })
 
   // 5. Criar itens em comandas
