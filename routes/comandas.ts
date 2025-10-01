@@ -7,9 +7,9 @@ const prisma = new PrismaClient()
 const router = Router()
 
 const comandaSchema = z.object({
-   numero: z.string().min(1, "Número é obrigatório"),
+   numero: z.string().min(1, "Identificador é obrigatório"),
    data: z.string().optional(),
-   status: z.enum(['ABERTA', 'FECHADA', 'CANCELADA', 'PENDENTE']).default('ABERTA'),
+   status: z.enum(['ABERTA', 'FECHADA', 'CANCELADA', 'PENDENTE']).default('ABERTA').optional(),
 })
 // rota get
 router.get("/", async (req, res) => {
