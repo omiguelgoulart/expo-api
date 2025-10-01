@@ -64,7 +64,7 @@ model Produto {
 
 model Comanda {
   id          Int           @id @default(autoincrement())
-  numero      Int           @unique // Melhor se for único globalmente
+  numero      String
   data        DateTime      @default(now())
   status      StatusComanda @default(ABERTA)
 
