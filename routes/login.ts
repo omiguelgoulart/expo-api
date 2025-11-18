@@ -1,94 +1,76 @@
-import jwt from "jsonwebtoken"
-import { PrismaClient } from "@prisma/client"
-import { Router } from "express"
-import bcrypt from 'bcrypt'
+import jwt from "jsonwebtoken";
+import { PrismaClient } from "@prisma/client";
+import { Router } from "express";
+import bcrypt from "bcrypt";
 
-const router = Router()
+const router = Router();
 
 const prisma = new PrismaClient({
-    log: [
-      {
-        emit: 'event',
-        level: 'query',
-      },
-      {
-        emit: 'stdout',
-        level: 'error',
-      },
-      {
-        emit: 'stdout',
-        level: 'info',
-      },
-      {
-        emit: 'stdout',
-        level: 'warn',
-      },
-    ],
-  })
+  log: [
+    { emit: "event", level: "query" },
+    { emit: "stdout", level: "error" },
+    { emit: "stdout", level: "info" },
+    { emit: "stdout", level: "warn" },
+  ],
+});
 
 router.post("/", async (req, res) => {
-  const { email, senha } = req.body
+  const { email, senha } = req.body;
 
-  // em termos de segurança, o recomendado é exibir uma mensagem padrão
-  // a fim de evitar de dar "dicas" sobre o processo de login para hackers
-  const mensaPadrao = "Login ou senha incorretos"
+  const mensaPadrao = "Login ou senha incorretos";
 
   if (!email || !senha) {
-    // res.status(400).json({ erro: "Informe e-mail e senha do usuário" })
-    res.status(400).json({ erro: mensaPadrao })
-    return
+    return res.status(400).json({ erro: mensaPadrao });
   }
 
   try {
     const usuario = await prisma.usuario.findFirst({
-      where: { email }
-    })
+      where: { email },
+      include: {
+        empresa: true, // <- assume que tem relação usuario.empresa
+      },
+    });
 
     if (usuario == null) {
-      // res.status(400).json({ erro: "E-mail inválido" })
-      res.status(400).json({ erro: mensaPadrao })
-      return
+      return res.status(400).json({ erro: mensaPadrao });
     }
 
-    // se o e-mail existe, faz-se a comparação dos hashs
-    if (bcrypt.compareSync(senha, usuario.senha)) {
-      // extrai o papel (campo pode ser 'papel' ou 'role' dependendo do schema)
-      const papel = (usuario as any).papel ?? (usuario as any).role ?? null
+    const senhaConfere = bcrypt.compareSync(senha, usuario.senha);
 
-      // se confere, gera e retorna o token incluindo o papel
-      const token = jwt.sign(
-        {
-          userLogadoId: usuario.id,
-          userLogadoNome: usuario.nome,
-          papel,
-        },
-        process.env.JWT_KEY as string,
-        { expiresIn: "1h" }
-      )
+    if (!senhaConfere) {
+      return res.status(400).json({ erro: mensaPadrao });
+    }
 
-      res.status(200).json({
-        id: usuario.id,
-        nome: usuario.nome,
-        email: usuario.email,
+    // papel do usuário - no app vai ser sempre FUNCIONARIO (ajustado no cadastro)
+    const papel = (usuario as any).papel ?? (usuario as any).role ?? "FUNCIONARIO";
+
+    const empresaId = (usuario as any).empresaId ?? null;
+    const empresaNome = (usuario as any).empresa?.nome ?? null;
+
+    const token = jwt.sign(
+      {
+        userLogadoId: usuario.id,
+        userLogadoNome: usuario.nome,
         papel,
-        token,
-      })
-    } else {
-      // res.status(400).json({ erro: "Senha incorreta" })
+        empresaId,
+      },
+      process.env.JWT_KEY as string,
+      { expiresIn: "8h" }
+    );
 
-      //   await prisma.log.create({
-      //     data: { 
-      //       descricao: "Tentativa de Acesso Inválida", 
-      //       complemento: `Funcionário: ${usuario.email}`,
-      //       usuarioId: usuario.id
-      //     }
-      //   })
-
-      res.status(400).json({ erro: mensaPadrao })
-    }
+    return res.status(200).json({
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      papel,
+      empresaId,
+      empresaNome,
+      token,
+    });
   } catch (error) {
-    res.status(400).json(error)
+    console.error("Erro no login:", error);
+    return res.status(500).json({ erro: "Erro interno ao fazer login" });
   }
-})
+});
 
-export default router
+export default router;
