@@ -1,6 +1,6 @@
 import express from 'express';
 import categoriaRoutes from './routes/categorias';
-
+import empresaRoutes from './routes/empresa';
 import usuarioRoutes from './routes/usuarios';
 import loginRoutes from './routes/login';
 import produtoRoutes from './routes/produtos';
@@ -27,6 +27,7 @@ app.use('/categoria', categoriaRoutes);
 app.use('/produto', produtoRoutes);
 app.use('/pedido', pedidoRoutes);
 app.use('/comanda', comandaRoutes);
+app.use('/empresa', empresaRoutes);
 
 
 const PORT = process.env.PORT || 3003;

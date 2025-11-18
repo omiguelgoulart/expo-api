@@ -1,103 +1,114 @@
 import { PrismaClient } from "@prisma/client"
-import { Router } from "express"
-import bcrypt from 'bcrypt'
-import { z } from 'zod'
+import { Router, Request } from "express"
+import { z } from "zod"
 
 const prisma = new PrismaClient()
-const router = Router()
+
+interface ComandaParams {
+  empresaId: string
+  id?: string
+}
+
+// mergeParams TRUE → permite acessar empresaId vindo da rota pai
+const router = Router({ mergeParams: true })
 
 const comandaSchema = z.object({
-   numero: z.string().min(1, "Identificador é obrigatório!!"),
-   data: z.string().optional(),
-   status: z.enum(['ABERTA', 'FECHADA', 'CANCELADA', 'PENDENTE']).default('ABERTA').optional(),
-   empresaId: z.string(),
-   usuarioId: z.string().optional()
-})
-// rota get
-router.get("/", async (req, res) => {
-    try {
-        const comandas = await prisma.comanda.findMany({
-            include: { pedidos: { include: { produto: true } } }
-        })
-        res.json(comandas)
-    } catch (error) {
-        res.status(500).json({ error: "Erro ao buscar comandas." })
-    }           
+  numero: z.string().min(1, "Identificador é obrigatório!!"),
+  data: z.string().optional(),
+  status: z.enum(["ABERTA", "FECHADA", "CANCELADA", "PENDENTE"]).default("ABERTA").optional(),
+  usuarioId: z.string().optional(),
 })
 
-// rota post
-router.post("/", async (req, res) => {
-    try {
-        const parsedData = comandaSchema.parse(req.body)
-        // valida que 'numero' é uma string não vazia
-        const comandaData = {
-            ...parsedData,
-            numero: parsedData.numero
-        }
-        if (!comandaData.numero || typeof comandaData.numero !== "string") {
-            return res.status(400).json({ message: "Número inválido." })
-        }
-        const novaComanda = await prisma.comanda.create({
-            data: comandaData
-        })
-        res.status(201).json(novaComanda)
-    } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({ errors: error.errors })
-        }   
-        res.status(500).json({ error: "Erro ao criar comanda." })
-    }
+router.get("/", async (req: Request<ComandaParams>, res) => {
+  const { empresaId } = req.params
+
+  try {
+    const comandas = await prisma.comanda.findMany({
+      where: { empresaId },
+      include: { pedidos: { include: { produto: true } } },
+    })
+    res.json(comandas)
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar comandas." })
+  }
 })
 
-// rota patch
-router.patch("/:id", async (req, res) => {
-    const id = req.params.id
-    try {
-        const parsedData = comandaSchema.partial().parse(req.body)
-        // opcional: checar existência antes
-        const existe = await prisma.comanda.findUnique({ where: { id } })
-        if (!existe) return res.status(404).json({ message: "Comanda não encontrada." })
-        const comandaAtualizada = await prisma.comanda.update({
-            where: { id },
-            data: parsedData,
-        })
-        return res.json(comandaAtualizada)
-    } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({ errors: error.errors })
-        }
-        res.status(500).json({ error: "Erro ao atualizar comanda." })
+
+router.post("/", async (req: Request<ComandaParams>, res) => {
+  const { empresaId } = req.params
+
+  try {
+    const parsedData = comandaSchema.parse(req.body)
+
+    const novaComanda = await prisma.comanda.create({
+      data: { ...parsedData, empresaId },
+    })
+
+    res.status(201).json(novaComanda)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ errors: error.errors })
     }
+    res.status(500).json({ error: "Erro ao criar comanda." })
+  }
 })
 
-// rota delete
-router.delete("/:id", async (req, res) => {
-    const id = req.params.id
-    try {
-        await prisma.comanda.delete({
-            where: { id }
-        })
-        res.status(204).send()
-    } catch (error) {
-        res.status(500).json({ error: "Erro ao deletar comanda." })
+router.patch("/:id", async (req: Request<ComandaParams>, res) => {
+  const { id, empresaId } = req.params
+
+  try {
+    const parsedData = comandaSchema.partial().parse(req.body)
+
+    const existe = await prisma.comanda.findUnique({ where: { id } })
+    if (!existe || existe.empresaId !== empresaId) {
+      return res.status(404).json({ message: "Comanda não encontrada para esta empresa." })
     }
+
+    const comandaAtualizada = await prisma.comanda.update({
+      where: { id },
+      data: parsedData,
+    })
+
+    res.json(comandaAtualizada)
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao atualizar comanda." })
+  }
 })
 
-//get detalhes da comanda
-router.get("/:id", async (req, res) => {
-    const id = req.params.id
-    try {
-        const comanda = await prisma.comanda.findUnique({
-            where: { id },
-            include: { pedidos: { include: { produto: true } } }
-        })
-        if (!comanda) {
-            return res.status(404).json({ message: "Comanda não encontrada." })
-        }
-        res.json(comanda)
-    } catch (error) {
-        res.status(500).json({ error: "Erro ao buscar comanda." })
+router.delete("/:id", async (req: Request<ComandaParams>, res) => {
+  const { id, empresaId } = req.params
+
+  try {
+    const existe = await prisma.comanda.findUnique({ where: { id } })
+    if (!existe || existe.empresaId !== empresaId) {
+      return res.status(404).json({ message: "Comanda não encontrada para esta empresa." })
     }
+
+    await prisma.comanda.delete({ where: { id } })
+
+    res.status(204).send()
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao deletar comanda." })
+  }
+})
+
+router.get("/:id", async (req: Request<ComandaParams>, res) => {
+  const { id, empresaId } = req.params
+
+  try {
+    const comanda = await prisma.comanda.findUnique({
+      where: { id },
+      include: { pedidos: { include: { produto: true } } },
+    })
+
+    if (!comanda || comanda.empresaId !== empresaId) {
+      return res.status(404).json({ message: "Comanda não encontrada para esta empresa." })
+    }
+
+    res.json(comanda)
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar comanda." })
+  }
 })
 
 export default router
