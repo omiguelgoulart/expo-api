@@ -19,19 +19,29 @@ const comandaSchema = z.object({
   usuarioId: z.string().optional(),
 })
 
-router.get("/", async (req: Request<ComandaParams>, res) => {
-  const { empresaId } = req.params
+interface AuthenticatedRequest extends Request {
+    user?: { empresaId?: string }
+}
+
+router.get("/:empresaId", async (req, res) => {
+  const { empresaId } = req.params;
+
+  if (!empresaId) {
+    return res.status(400).json({ error: "empresaId não informado na rota." });
+  }
 
   try {
     const comandas = await prisma.comanda.findMany({
       where: { empresaId },
       include: { pedidos: { include: { produto: true } } },
-    })
-    res.json(comandas)
+    });
+
+    res.json(comandas);
   } catch (error) {
-    res.status(500).json({ error: "Erro ao buscar comandas." })
+    console.error("Erro no GET /comandas/:empresaId:", error);
+    res.status(500).json({ error: "Erro ao buscar comandas." });
   }
-})
+});
 
 
 router.post("/", async (req: Request<ComandaParams>, res) => {
