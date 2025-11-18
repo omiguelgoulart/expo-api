@@ -9,9 +9,9 @@ const router = Router()
 const pedidoItemSchema = z.object({
     comanda: z.number().optional(),
     quantidade: z.number().int().nonnegative().default(1),
-    precoUnitario: z.string(), // "42.90"
-    subtotal: z.string(),      // "42.90"
-    produtoId: z.number().int(), // obrigatório
+    precoUnitario: z.string(),
+    subtotal: z.string(),
+    produtoId: z.number().int(),
     observacoes: z.string().optional(),
 })
 
@@ -49,37 +49,40 @@ router.post("/", async (req, res) => {
     }
 })
 
-// rota put
-router.put("/:id", async (req, res) => {
-    const id = Number(req.params.id)
-    if (Number.isNaN(id)) return res.status(400).json({ message: "ID inválido." })
+// rota patch
+router.patch("/:id", async (req, res) => {
+    const { id } = req.params
     try {
-        const parsedData = pedidoItemSchema.partial().parse(req.body)
-        const { produtoId, precoUnitario, subtotal, ...rest } = parsedData
+        const parsed = pedidoItemSchema.partial().parse(req.body)
+        const { produtoId, precoUnitario, subtotal, comanda, ...rest } = parsed as any
+
         const data: any = { ...rest }
+        if (precoUnitario !== undefined) {
+            data.precoUnitario = new Prisma.Decimal(precoUnitario)
+        }
+        if (subtotal !== undefined) {
+            data.subtotal = new Prisma.Decimal(subtotal)
+        }
         if (produtoId !== undefined) {
             data.produto = { connect: { id: produtoId } }
         }
-        if (precoUnitario !== undefined) {
-            data.precoUnitario = new Prisma.Decimal(precoUnitario) // ou simplesmente: precoUnitario, se gerado aceitar string
+        if (comanda !== undefined) {
+            data.comanda = { connect: { id: comanda } }
         }
-        if (subtotal !== undefined) {
-            data.subtotal = new Prisma.Decimal(subtotal)           // ou simplesmente: subtotal, se gerado aceitar string
-        }
-        const itemAtualizado = await prisma.pedidoItem.update({
+
+        const pedidoAtualizado = await prisma.pedidoItem.update({
             where: { id: String(id) },
-            data,
+            data
         })
-        return res.json(itemAtualizado)
-    } catch (error: any) {
-        if (error.name === "ZodError") {
-            return res.status(400).json({ message: "Dados inválidos.", errors: error.errors })
+        res.json(pedidoAtualizado)
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({ errors: error.errors })
         }
-        // trata P2025 caso pule o findUnique
-        if (error instanceof PrismaClientKnownRequestError && error.code === "P2025") {
-            return res.status(404).json({ message: "Item não encontrado." })
-        } 
-        return res.status(500).json({ message: "Erro ao atualizar item.", error: String(error.message ?? error) })
+        if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
+            return res.status(404).json({ error: "Item não encontrado." })
+        }
+        res.status(500).json({ error: "Erro ao atualizar item." })
     }
 })
 

@@ -10,6 +10,8 @@ const comandaSchema = z.object({
    numero: z.string().min(1, "Identificador é obrigatório!!"),
    data: z.string().optional(),
    status: z.enum(['ABERTA', 'FECHADA', 'CANCELADA', 'PENDENTE']).default('ABERTA').optional(),
+   empresaId: z.string(),
+   usuarioId: z.string().optional()
 })
 // rota get
 router.get("/", async (req, res) => {
@@ -48,30 +50,21 @@ router.post("/", async (req, res) => {
 })
 
 // rota patch
-router.put("/:id", async (req, res) => {
-    const id = Number(req.params.id)
-    if (Number.isNaN(id)) return res.status(400).json({ message: "ID inválido." })  
+router.patch("/:id", async (req, res) => {
+    const id = req.params.id
     try {
         const parsedData = comandaSchema.partial().parse(req.body)
         // opcional: checar existência antes
         const existe = await prisma.comanda.findUnique({ where: { id } })
         if (!existe) return res.status(404).json({ message: "Comanda não encontrada." })
-        // converte 'numero' para number se existir
-        const updateData: any = { ...parsedData }
-        if (updateData.numero !== undefined) {
-            updateData.numero = Number(updateData.numero)
-            if (Number.isNaN(updateData.numero)) {
-                return res.status(400).json({ message: "Número inválido." })
-            }
-        }
         const comandaAtualizada = await prisma.comanda.update({
             where: { id },
-            data: updateData,
+            data: parsedData,
         })
-        return res.json(comandaAtualizada)  
-    } catch (error: any) {
-        if (error.name === "ZodError") {
-            return res.status(400).json({ message: "Dados inválidos.", errors: error.errors })
+        return res.json(comandaAtualizada)
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({ errors: error.errors })
         }
         res.status(500).json({ error: "Erro ao atualizar comanda." })
     }
@@ -79,14 +72,12 @@ router.put("/:id", async (req, res) => {
 
 // rota delete
 router.delete("/:id", async (req, res) => {
-    const id = Number(req.params.id)
-    if (Number.isNaN(id)) return res.status(400).json({ message: "ID inválido." })
+    const id = req.params.id
     try {
-        // opcional: checar existência antes
-        const existe = await prisma.comanda.findUnique({ where: { id } })
-        if (!existe) return res.status(404).json({ message: "Comanda não encontrada." })
-        await prisma.comanda.delete({ where: { id } })
-        return res.status(200).json({ message: "Comanda deletada com sucesso." })
+        await prisma.comanda.delete({
+            where: { id }
+        })
+        res.status(204).send()
     } catch (error) {
         res.status(500).json({ error: "Erro ao deletar comanda." })
     }
@@ -94,15 +85,16 @@ router.delete("/:id", async (req, res) => {
 
 //get detalhes da comanda
 router.get("/:id", async (req, res) => {
-    const id = Number(req.params.id)
-    if (Number.isNaN(id)) return res.status(400).json({ message: "ID inválido." })
+    const id = req.params.id
     try {
         const comanda = await prisma.comanda.findUnique({
-            where: { id },  
+            where: { id },
             include: { pedidos: { include: { produto: true } } }
         })
-        if (!comanda) return res.status(404).json({ message: "Comanda não encontrada." })
-        return res.json(comanda)
+        if (!comanda) {
+            return res.status(404).json({ message: "Comanda não encontrada." })
+        }
+        res.json(comanda)
     } catch (error) {
         res.status(500).json({ error: "Erro ao buscar comanda." })
     }

@@ -14,6 +14,7 @@ const produtoSchema = z.object({
     ativo: z.boolean().default(true),
     imagem: z.string().url().optional(),
     categoriaId: z.number().int(), // obrigatório
+    empresaId: z.string().min(1),  // obrigatório
 })
 
 // rota get
@@ -30,12 +31,13 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
     try {
         const parsed = produtoSchema.parse(req.body)
-        const { categoriaId, preco, ...rest } = parsed
+        const { categoriaId, preco, empresaId, ...rest } = parsed
 
         const data: Prisma.ProdutoCreateInput = {
             ...rest,
             preco: new Prisma.Decimal(preco),    // ou simplesmente: preco, se gerado aceitar string
             categoria: { connect: { id: categoriaId } },
+            empresa: { connect: { id: empresaId } },
         }
 
         const novoProduto = await prisma.produto.create({ data })
@@ -48,34 +50,31 @@ router.post("/", async (req, res) => {
     }
 })
 
-// rota put
-router.put("/:id", async (req, res) => {
-    const id = Number(req.params.id)
-    if (Number.isNaN(id)) return res.status(400).json({ message: "ID inválido." })
+// rota patch
+router.patch("/:id", async (req, res) => {
+    const id = req.params.id
     try {
-        const parsedData = produtoSchema.partial().parse(req.body)
-        const { categoriaId, preco, ...rest } = parsedData
-        const data: Prisma.ProdutoUpdateInput = { ...rest }
-
-        if (categoriaId !== undefined) {
-            data.categoria = { connect: { id: categoriaId } }
+        const parsed = produtoSchema.partial().parse(req.body)
+        const { categoriaId, preco, empresaId, ...rest } = parsed
+        const data: Prisma.ProdutoUpdateInput = {
+            ...rest,
+            ...(preco !== undefined && { preco: new Prisma.Decimal(preco) }),
+            ...(categoriaId !== undefined && { categoria: { connect: { id: categoriaId } } }),
+            ...(empresaId !== undefined && { empresa: { connect: { id: empresaId } } }),
         }
-        if (preco !== undefined) {
-            data.preco = new Prisma.Decimal(preco)  // ou simplesmente: preco, se gerado aceitar string
-        }
-        // opcional: checar existência antes
-        const existe = await prisma.produto.findUnique({ where: { id } })
-        if (!existe) return res.status(404).json({ message: "Produto não encontrado." })
         const produtoAtualizado = await prisma.produto.update({
-            where: { id },
-            data,
+            where: { id: id },
+            data
         })
-        return res.json(produtoAtualizado)
-    } catch (error: any) {
-        if (error.name === "ZodError") {
-            return res.status(400).json({ message: "Dados inválidos.", errors: error.errors })
+        res.json(produtoAtualizado)
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({ errors: error.errors })
         }
-        return res.status(500).json({ message: "Erro ao atualizar produto.", error: String(error.message ?? error) })
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            return res.status(404).json({ error: "Produto não encontrado." })
+        }
+        res.status(500).json({ error: "Erro ao atualizar produto." })
     }
 })
 
@@ -84,12 +83,14 @@ router.delete("/:id", async (req, res) => {
     const { id } = req.params
     try {
         await prisma.produto.delete({
-            where: { id: Number(id) }
+            where: { id: id }
         })
         res.status(204).send()
-    }
-    catch (error) {
-        res.status(500).json({ error: "Erro ao deletar produto." })
+    } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            return res.status(404).json({ error: "Produto não encontrado." })
+        }
+        res.status(500).json({ error: "Erro ao remover produto." })
     }
 })
 

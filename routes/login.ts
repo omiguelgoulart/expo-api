@@ -52,11 +52,16 @@ router.post("/", async (req, res) => {
 
     // se o e-mail existe, faz-se a comparação dos hashs
     if (bcrypt.compareSync(senha, usuario.senha)) {
-      // se confere, gera e retorna o token
-      const token = jwt.sign({
-        userLogadoId: usuario.id,
-        userLogadoNome: usuario.nome
-      },
+      // extrai o papel (campo pode ser 'papel' ou 'role' dependendo do schema)
+      const papel = (usuario as any).papel ?? (usuario as any).role ?? null
+
+      // se confere, gera e retorna o token incluindo o papel
+      const token = jwt.sign(
+        {
+          userLogadoId: usuario.id,
+          userLogadoNome: usuario.nome,
+          papel,
+        },
         process.env.JWT_KEY as string,
         { expiresIn: "1h" }
       )
@@ -65,18 +70,19 @@ router.post("/", async (req, res) => {
         id: usuario.id,
         nome: usuario.nome,
         email: usuario.email,
-        token
+        papel,
+        token,
       })
     } else {
       // res.status(400).json({ erro: "Senha incorreta" })
 
-    //   await prisma.log.create({
-    //     data: { 
-    //       descricao: "Tentativa de Acesso Inválida", 
-    //       complemento: `Funcionário: ${usuario.email}`,
-    //       usuarioId: usuario.id
-    //     }
-    //   })
+      //   await prisma.log.create({
+      //     data: { 
+      //       descricao: "Tentativa de Acesso Inválida", 
+      //       complemento: `Funcionário: ${usuario.email}`,
+      //       usuarioId: usuario.id
+      //     }
+      //   })
 
       res.status(400).json({ erro: mensaPadrao })
     }

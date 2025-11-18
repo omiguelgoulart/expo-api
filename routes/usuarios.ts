@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient, PapelUsuario } from "@prisma/client"
 import { Router } from "express"
 import bcrypt from 'bcrypt'
 import { z } from 'zod'
@@ -9,9 +9,60 @@ const router = Router()
 const usuarioSchema = z.object({
     nome: z.string(),
     email: z.string(),
-    senha: z.string()
-})
-
+    senha: z.string(),
+    papel: z.nativeEnum(PapelUsuario),
+    empresaId: z.string(),
+  })
+  
+  function validaSenha(senha: string) {
+  
+    const mensa: string[] = []
+  
+    // .length: retorna o tamanho da string (da senha)
+    if (senha.length < 8) {
+      mensa.push("Erro... senha deve possuir, no mínimo, 8 caracteres")
+    }
+  
+    // contadores
+    let pequenas = 0
+    let grandes = 0
+    let numeros = 0
+    let simbolos = 0
+  
+    // senha = "abc123"
+    // letra = "a"
+  
+    // percorre as letras da variável senha
+    for (const letra of senha) {
+      // expressão regular
+      if ((/[a-z]/).test(letra)) {
+        pequenas++
+      }
+      else if ((/[A-Z]/).test(letra)) {
+        grandes++
+      }
+      else if ((/[0-9]/).test(letra)) {
+        numeros++
+      } else {
+        simbolos++
+      }
+    }
+  
+    if (pequenas == 0 ) {
+      mensa.push("Erro... senha deve possuir letras minúsculas")
+    }
+    if (grandes == 0 ) {
+      mensa.push("Erro... senha deve possuir letras maiúsculas")
+    }
+    if (numeros == 0 ) {
+      mensa.push("Erro... senha deve possuir números")
+    }
+    if (simbolos == 0 ) {
+      mensa.push("Erro... senha deve possuir símbolos")
+    }
+  
+    return mensa
+  }
 router.get("/", async (req, res) => {
   try {
     const usuarios = await prisma.usuario.findMany()
@@ -21,55 +72,17 @@ router.get("/", async (req, res) => {
   }
 })
 
-function validaSenha(senha: string) {
-
-  const mensa: string[] = []
-
-  // .length: retorna o tamanho da string (da senha)
-  if (senha.length < 8) {
-    mensa.push("Erro... senha deve possuir, no mínimo, 8 caracteres")
+router.get("/:id", async (req, res) => {
+  const { id } = req.params
+  try {
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: id }
+    })
+    res.status(200).json(usuario)
+  } catch (error) {
+    res.status(400).json(error)
   }
-
-  // contadores
-  let pequenas = 0
-  let grandes = 0
-  let numeros = 0
-  let simbolos = 0
-
-  // senha = "abc123"
-  // letra = "a"
-
-  // percorre as letras da variável senha
-  for (const letra of senha) {
-    // expressão regular
-    if ((/[a-z]/).test(letra)) {
-      pequenas++
-    }
-    else if ((/[A-Z]/).test(letra)) {
-      grandes++
-    }
-    else if ((/[0-9]/).test(letra)) {
-      numeros++
-    } else {
-      simbolos++
-    }
-  }
-
-  if (pequenas == 0 ) {
-    mensa.push("Erro... senha deve possuir letras minúsculas")
-  }
-  if (grandes == 0 ) {
-    mensa.push("Erro... senha deve possuir letras maiúsculas")
-  }
-  if (numeros == 0 ) {
-    mensa.push("Erro... senha deve possuir números")
-  }
-  if (simbolos == 0 ) {
-    mensa.push("Erro... senha deve possuir símbolos")
-  }
-
-  return mensa
-}
+})
 
 router.post("/", async (req, res) => {
  const valida = usuarioSchema.safeParse(req.body)
@@ -100,6 +113,36 @@ router.post("/", async (req, res) => {
   } catch (error) {
     res.status(400).json(error)
   }
+})
+
+router.delete("/:id",  async (req, res) => {
+    const { id } = req.params
+    try {
+        await prisma.usuario.delete({
+            where: { id: id }
+        })
+        res.status(200).json({ message: "Usuário removido com sucesso." })
+    } catch (error) {
+        res.status(500).json({ error: "Erro ao remover usuário." })
+    }
+})
+
+router.patch("/:id", async (req, res) => {
+    const { id } = req.params
+    const valida = usuarioSchema.partial().safeParse(req.body)
+    if (!valida.success){
+       res.status(400).json({ erro: valida.error})
+       return
+    }
+    try {
+      const usuario = await prisma.usuario.update({
+          where: { id: id },
+          data: valida.data
+        })
+      res.status(200).json(usuario)
+    } catch (error) {
+      res.status(400).json(error)
+    }
 })
 
 export default router

@@ -8,7 +8,8 @@ const router = Router()
 
 const categoriaSchema = z.object({
     nome: z.string().min(1, "Nome é obrigatório"),
-    descricao: z.string().optional()
+    descricao: z.string().optional(),
+    empresaId: z.string().min(1, "empresaId é obrigatório")
 })
 
 // rota get
@@ -38,32 +39,23 @@ router.post("/", async (req, res) => {
 })
 
 // rota patch
-router.put("/:id", async (req, res) => {
-    const id = Number(req.params.id)
-    if (Number.isNaN(id)) return res.status(400).json({ message: "ID inválido." })
-
+router.patch("/:id", async (req, res) => {
+    const { id } = req.params
     try {
         const parsedData = categoriaSchema.partial().parse(req.body)
-
-        // opcional: checar existência antes
-        const existe = await prisma.categoria.findUnique({ where: { id } })
-        if (!existe) return res.status(404).json({ message: "Categoria não encontrada." })
-
         const categoriaAtualizada = await prisma.categoria.update({
-            where: { id },
-            data: parsedData,
+            where: { id: Number(id) },
+            data: parsedData
         })
-        return res.json(categoriaAtualizada)
-
-    } catch (error: any) {
-        if (error.name === "ZodError") {
-            return res.status(400).json({ message: "Dados inválidos.", errors: error.errors })
+        res.json(categoriaAtualizada)
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({ errors: error.errors })
         }
-        // trata P2025 caso pule o findUnique
-        if (error instanceof PrismaClientKnownRequestError && error.code === "P2025") {
-            return res.status(404).json({ message: "Categoria não encontrada." })
+        if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
+            return res.status(404).json({ error: "Categoria não encontrada." })
         }
-        return res.status(500).json({ message: "Erro ao atualizar categoria.", error: String(error.message ?? error) })
+        res.status(500).json({ error: "Erro ao atualizar categoria." })
     }
 })
 
@@ -78,19 +70,6 @@ router.delete("/:id", async (req, res) => {
         } catch (error) {
                 res.status(500).json({ error: "Erro ao deletar categoria." })
         }
-})
-
-// rota delete
-router.delete("/:id", async (req, res) => {
-    const { id } = req.params
-    try {
-        await prisma.categoria.delete({
-            where: { id: Number(id) }
-        })
-        res.status(204).send()
-    } catch (error) {
-        res.status(500).json({ error: "Erro ao deletar categoria." })
-    }
 })
 
 export default router

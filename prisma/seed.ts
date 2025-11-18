@@ -1,215 +1,143 @@
-import { PrismaClient, Prisma } from "@prisma/client"
-import bcrypt from "bcrypt"
+import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Iniciando seed...")
+  console.log("🌱 Iniciando seed...");
 
-  // 1. Criar usuário admin
-  const senhaHash = await bcrypt.hash("123456", 10)
-  await prisma.usuario.upsert({
-    where: { email: "admin@restaurante.com" },
-    update: {},
-    create: {
-      nome: "Administrador",
-      email: "admin@restaurante.com",
-      senha: senhaHash,
+  // -------------------------------
+  // Empresa
+  // -------------------------------
+  const empresa = await prisma.empresa.create({
+    data: {
+      nome: "Restaurante Sabor Caseiro",
+      cnpj: "12.345.678/0001-99",
+      telefone: "(51) 99999-9999",
+      email: "contato@saborcaseiro.com",
     },
-  })
+  });
 
-  // 2. Criar categorias
-  const bebidas = await prisma.categoria.upsert({
-    where: { nome: "Bebidas" },
-    update: {},
-    create: { nome: "Bebidas", descricao: "Sucos, refrigerantes, drinks e cervejas" },
-  })
+  console.log("✔ Empresa criada:", empresa.nome);
 
-  const pratos = await prisma.categoria.upsert({
-    where: { nome: "Pratos" },
-    update: {},
-    create: { nome: "Pratos", descricao: "Refeições principais" },
-  })
+  // -------------------------------
+  // Usuários
+  // -------------------------------
+  const admin = await prisma.usuario.create({
+    data: {
+      nome: "Administrador",
+      email: "admin@saborcaseiro.com",
+      senha: "123456", // coloque hash futuramente
+      papel: "ADMIN",
+      empresaId: empresa.id,
+    },
+  });
 
-  const sobremesas = await prisma.categoria.upsert({
-    where: { nome: "Sobremesas" },
-    update: {},
-    create: { nome: "Sobremesas", descricao: "Doces e sobremesas" },
-  })
+  const garcom = await prisma.usuario.create({
+    data: {
+      nome: "Pedro Garçom",
+      email: "garcom@saborcaseiro.com",
+      senha: "123456",
+      papel: "GARCOM",
+      empresaId: empresa.id,
+    },
+  });
 
-  // 3. Criar produtos
-  const produtos = await prisma.produto.createMany({
+  const funcionario = await prisma.usuario.create({
+    data: {
+      nome: "Maria Funcionária",
+      email: "func@saborcaseiro.com",
+      senha: "123456",
+      papel: "FUNCIONARIO",
+      empresaId: empresa.id,
+    },
+  });
+
+  console.log("✔ Usuários criados");
+
+  // -------------------------------
+  // Categorias
+  // -------------------------------
+  const categorias = await prisma.categoria.createMany({
     data: [
-      // Bebidas
+      { nome: "Bebidas", descricao: "Refrigerantes, sucos e água", empresaId: empresa.id },
+      { nome: "Lanches", descricao: "Xis, hambúrguer e porções", empresaId: empresa.id },
+      { nome: "Pratos", descricao: "Pratos executivos e refeições", empresaId: empresa.id },
+    ],
+  });
+
+  console.log("✔ Categorias criadas");
+
+  // Buscar categorias para vincular produtos
+  const bebidas = await prisma.categoria.findFirst({ where: { nome: "Bebidas", empresaId: empresa.id } });
+  const lanches = await prisma.categoria.findFirst({ where: { nome: "Lanches", empresaId: empresa.id } });
+  const pratos  = await prisma.categoria.findFirst({ where: { nome: "Pratos", empresaId: empresa.id } });
+
+  // -------------------------------
+  // Produtos
+  // -------------------------------
+  await prisma.produto.createMany({
+    data: [
       {
-        nome: "Coca-Cola Lata",
+        nome: "Refrigerante Lata",
         descricao: "350ml",
-        preco: new Prisma.Decimal("6.50"),
-        estoque: 100,
-        ativo: true,
-        categoriaId: bebidas.id,
-        tipo_item: "BEBIDA",
-      },
-      {
-        nome: "Suco de Laranja",
-        descricao: "Copo 300ml natural",
-        preco: new Prisma.Decimal("8.00"),
+        preco: 6.00,
         estoque: 50,
-        ativo: true,
-        categoriaId: bebidas.id,
-        tipo_item: "BEBIDA",
+        empresaId: empresa.id,
+        categoriaId: bebidas!.id,
       },
       {
-        nome: "Cerveja Heineken",
-        descricao: "Long neck 330ml",
-        preco: new Prisma.Decimal("12.00"),
-        estoque: 80,
-        ativo: true,
-        categoriaId: bebidas.id,
-        tipo_item: "BEBIDA",
+        nome: "Água Mineral",
+        descricao: "500ml",
+        preco: 4.00,
+        estoque: 40,
+        empresaId: empresa.id,
+        categoriaId: bebidas!.id,
       },
-
-      // Pratos
       {
-        nome: "Filé à Parmegiana",
-        descricao: "Serve 1 pessoa",
-        preco: new Prisma.Decimal("42.90"),
+        nome: "Xis Salada",
+        descricao: "Pão, carne, salada e molho",
+        preco: 22.00,
         estoque: 20,
-        ativo: true,
-        categoriaId: pratos.id,
-        tipo_item: "REFEICAO_FIXO",
+        empresaId: empresa.id,
+        categoriaId: lanches!.id,
       },
       {
-        nome: "Strogonoff de Frango",
-        descricao: "Acompanha arroz e batata palha",
-        preco: new Prisma.Decimal("35.00"),
-        estoque: 30,
-        ativo: true,
-        categoriaId: pratos.id,
-        tipo_item: "REFEICAO_FIXO",
-      },
-
-      // Sobremesas
-      {
-        nome: "Pudim de Leite",
-        descricao: "Fatias individuais",
-        preco: new Prisma.Decimal("12.00"),
+        nome: "Batata Frita",
+        descricao: "Porção média",
+        preco: 18.00,
         estoque: 15,
-        ativo: true,
-        categoriaId: sobremesas.id,
-        tipo_item: "SOBREMESA",
+        empresaId: empresa.id,
+        categoriaId: lanches!.id,
       },
       {
-        nome: "Petit Gateau",
-        descricao: "Bolo com sorvete de creme",
-        preco: new Prisma.Decimal("18.00"),
-        estoque: 10,
-        ativo: true,
-        categoriaId: sobremesas.id,
-        tipo_item: "SOBREMESA",
+        nome: "Prato Feito",
+        descricao: "Arroz, feijão, salada e carne",
+        preco: 25.00,
+        estoque: 30,
+        empresaId: empresa.id,
+        categoriaId: pratos!.id,
+      },
+      {
+        nome: "Parmegiana",
+        descricao: "Carne + molho + queijo + arroz + fritas",
+        preco: 32.00,
+        estoque: 18,
+        empresaId: empresa.id,
+        categoriaId: pratos!.id,
       },
     ],
-  })
+  });
 
-  console.log(`✅ Produtos inseridos: ${produtos.count}`)
+  console.log("✔ Produtos criados");
 
-  // Buscar produtos criados para vincular
-  const allProdutos = await prisma.produto.findMany()
-
-  // 4. Criar comandas
-  const comanda1 = await prisma.comanda.create({
-    data: { numero: "201", status: "ABERTA" },
-  })
-
-  const comanda2 = await prisma.comanda.create({
-    data: { numero: "202", status: "PENDENTE" },
-  })
-
-  const comanda3 = await prisma.comanda.create({
-    data: { numero: "203", status: "FECHADA" },
-  })
-
-  const comanda4 = await prisma.comanda.create({
-    data: { numero: "204", status: "CANCELADA" },
-  })
-
-  // 5. Criar itens em comandas
-  await prisma.pedidoItem.createMany({
-    data: [
-      // Comanda 1 (aberta)
-      {
-        comandaId: comanda1.id,
-        produtoId: allProdutos.find((p) => p.nome === "Coca-Cola Lata")!.id,
-        quantidade: new Prisma.Decimal("2.00"),
-        precoUnitario: new Prisma.Decimal("6.50"),
-        subtotal: new Prisma.Decimal("13.00"),
-        observacoes: "bem gelada",
-      },
-      {
-        comandaId: comanda1.id,
-        produtoId: allProdutos.find((p) => p.nome === "Filé à Parmegiana")!.id,
-        quantidade: new Prisma.Decimal("1.00"),
-        precoUnitario: new Prisma.Decimal("42.90"),
-        subtotal: new Prisma.Decimal("42.90"),
-        observacoes: "com arroz e fritas",
-      },
-
-      // Comanda 2 (pendente)
-      {
-        comandaId: comanda2.id,
-        produtoId: allProdutos.find((p) => p.nome === "Suco de Laranja")!.id,
-        quantidade: new Prisma.Decimal("1.00"),
-        precoUnitario: new Prisma.Decimal("8.00"),
-        subtotal: new Prisma.Decimal("8.00"),
-        observacoes: "sem açúcar",
-      },
-      {
-        comandaId: comanda2.id,
-        produtoId: allProdutos.find((p) => p.nome === "Strogonoff de Frango")!.id,
-        quantidade: new Prisma.Decimal("1.00"),
-        precoUnitario: new Prisma.Decimal("35.00"),
-        subtotal: new Prisma.Decimal("35.00"),
-        observacoes: "com bastante batata palha",
-      },
-
-      // Comanda 3 (fechada)
-      {
-        comandaId: comanda3.id,
-        produtoId: allProdutos.find((p) => p.nome === "Cerveja Heineken")!.id,
-        quantidade: new Prisma.Decimal("3.00"),
-        precoUnitario: new Prisma.Decimal("12.00"),
-        subtotal: new Prisma.Decimal("36.00"),
-        observacoes: "long neck",
-      },
-      {
-        comandaId: comanda3.id,
-        produtoId: allProdutos.find((p) => p.nome === "Pudim de Leite")!.id,
-        quantidade: new Prisma.Decimal("2.00"),
-        precoUnitario: new Prisma.Decimal("12.00"),
-        subtotal: new Prisma.Decimal("24.00"),
-        observacoes: "bem doce",
-      },
-
-      // Comanda 4 (cancelada)
-      {
-        comandaId: comanda4.id,
-        produtoId: allProdutos.find((p) => p.nome === "Petit Gateau")!.id,
-        quantidade: new Prisma.Decimal("1.00"),
-        precoUnitario: new Prisma.Decimal("18.00"),
-        subtotal: new Prisma.Decimal("18.00"),
-        observacoes: "com sorvete extra",
-      },
-    ],
-  })
-
-  console.log("✅ Seed concluído com sucesso!")
+  console.log("🌱 Seed finalizado com sucesso!");
 }
 
 main()
-  .catch((e) => {
-    console.error(e)
-    process.exit(1)
+  .catch(e => {
+    console.error(e);
+    process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect()
-  })
+    await prisma.$disconnect();
+  });
