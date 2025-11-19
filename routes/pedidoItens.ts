@@ -10,8 +10,6 @@ const router = Router()
 const pedidoItemSchema = z.object({
     comanda: z.number().optional(),
     quantidade: z.number().int().nonnegative().default(1),
-    precoUnitario: z.string(),
-    subtotal: z.string(),
     produtoId: z.number().int(),
     observacoes: z.string().optional(),
 })
@@ -34,12 +32,10 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
     try {
         const parsed = pedidoItemSchema.parse(req.body)
-        const { produtoId, precoUnitario, subtotal, comanda, ...rest } = parsed
+        const { produtoId, comanda, ...rest } = parsed
 
         const data: any = {
             ...rest,
-            precoUnitario: new Prisma.Decimal(precoUnitario),
-            subtotal: new Prisma.Decimal(subtotal),
             produto: { connect: { id: produtoId } },
         }
 
