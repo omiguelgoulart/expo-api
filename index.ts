@@ -26,7 +26,6 @@ app.use('/categoria', categoriaRoutes);
 app.use('/produto', produtoRoutes);
 app.use('/pedido', pedidoRoutes);
 app.use('/comanda', comandaRoutes);
-app.use('/empresa', empresaRoutes);
 
 
 const PORT = process.env.PORT || 3003;
