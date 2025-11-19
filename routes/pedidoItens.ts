@@ -8,7 +8,7 @@ const prisma = new PrismaClient()
 const router = Router()
 
 const pedidoItemSchema = z.object({
-    comanda: z.number().optional(),
+    comanda: z.string(),
     quantidade: z.number().int().nonnegative().default(1),
     produtoId: z.string(),
     observacoes: z.string().optional(),
