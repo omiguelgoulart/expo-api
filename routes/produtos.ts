@@ -17,23 +17,11 @@ const produtoSchema = z.object({
   empresaId: z.string().min(1),  
 })
 
-router.get("/lista/:empresaId", async (req, res) => {
+router.get("", async (req, res) => {
   try {
-    const { empresaId } = req.params
-
-    const produtos = await prisma.produto.findMany({
-      where: { empresaId },
-      include: {
-        categoria: true,
-      },
-      orderBy: {
-        nome: "asc",
-      },
-    })
-
+    const produtos = await prisma.produto.findMany()
     return res.json(produtos)
   } catch (error) {
-    console.error("Erro ao buscar produtos:", error)
     return res.status(500).json({ error: "Erro ao buscar produtos." })
   }
 })
