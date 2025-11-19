@@ -21,16 +21,10 @@ const comandaSchema = z.object({
 });
 
 
-router.get("/listar/:empresaId", async (req: Request<Pick<ComandaParams, "empresaId">>, res) => {
-  const { empresaId } = req.params;
-
-  if (!empresaId) {
-    return res.status(400).json({ error: "empresaId não informado na rota." });
-  }
-
-  try {
+router.get("/", async (req, res) => {
+   try {
     const comandas = await prisma.comanda.findMany({
-      where: { empresaId },
+      where: {},
       include: {
         // aqui "pedidos" já vem com produto
         pedidos: {
@@ -48,27 +42,24 @@ router.get("/listar/:empresaId", async (req: Request<Pick<ComandaParams, "empres
   }
 });
 
-router.post("/post/:empresaId", async (req: Request<Pick<ComandaParams, "empresaId">>, res) => {
-  const { empresaId } = req.params;
-
+router.post("/", async (req, res) => {
   try {
-    const parsedBody = comandaSchema.parse(req.body);
+    const parsed = comandaSchema.parse(req.body);
+    const novoData = parsed.data ? new Date(parsed.data) : new Date();
 
-    const novaComanda = await prisma.comanda.create({
-      data: {
-        ...parsedBody,
-        empresaId, // sempre forçando empresa da rota
-      },
-    });
-
+    const data = {
+      ...parsed,
+      data: novoData,
+    };
+    const novaComanda = await prisma.comanda.create({ data });
     return res.status(201).json(novaComanda);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ message: "Dados inválidos.", errors: error.errors });
+      return res.status(400).json({
+        message: "Dados inválidos.",
+        errors: error.errors,
+      });
     }
-    console.error("Erro no POST /comanda/:empresaId:", error);
     return res.status(500).json({
       message: "Erro ao criar comanda.",
       error: String((error as any)?.message ?? error),
@@ -76,11 +67,8 @@ router.post("/post/:empresaId", async (req: Request<Pick<ComandaParams, "empresa
   }
 });
 
-router.get("/detalhe/:id", async (req, res) => {
+router.get("/:id", async (req, res) => {
   const { id } = req.params;
-  if (!id) {
-    return res.status(400).json({ error: "id não informado na rota." });
-  }
   try {
     const comanda = await prisma.comanda.findUnique({
       where: { id },
@@ -90,30 +78,26 @@ router.get("/detalhe/:id", async (req, res) => {
             produto: true,
           },
         },
-        usuario: true,
-        empresa: true,
       },
     });
-
     if (!comanda) {
       return res.status(404).json({ message: "Comanda não encontrada." });
     }
-
     res.json(comanda);
   } catch (error) {
-    console.error("Erro no GET /comanda/id/:id:", error);
+    console.error("Erro no GET /comanda/:id:", error);
     res.status(500).json({ error: "Erro ao buscar comanda." });
   }
 });
 
-router.patch("/editar/:empresaId/:id", async (req: Request<ComandaParams>, res) => {
-  const { id, empresaId } = req.params;
+router.patch("/editar/:empresaId/:id", async (req, res) => {
+  const { id } = req.params;
 
   try {
     const parsedData = comandaSchema.partial().parse(req.body);
 
     const existe = await prisma.comanda.findFirst({
-      where: { id, empresaId },
+      where: { id },
     });
 
     if (!existe) {
@@ -129,17 +113,17 @@ router.patch("/editar/:empresaId/:id", async (req: Request<ComandaParams>, res) 
 
     res.json(comandaAtualizada);
   } catch (error) {
-    console.error("Erro no PATCH /comanda/:empresaId/:id:", error);
+    console.error("Erro no PATCH /comanda/:id:", error);
     res.status(500).json({ error: "Erro ao atualizar comanda." });
   }
 });
 
-router.delete("/excluir/:empresaId/:id", async (req: Request<ComandaParams>, res) => {
-  const { id, empresaId } = req.params;
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
 
   try {
     const existe = await prisma.comanda.findFirst({
-      where: { id, empresaId },
+      where: { id },
     });
 
     if (!existe) {
@@ -152,7 +136,7 @@ router.delete("/excluir/:empresaId/:id", async (req: Request<ComandaParams>, res
 
     res.status(204).send();
   } catch (error) {
-    console.error("Erro no DELETE /comanda/:empresaId/:id:", error);
+    console.error("Erro no DELETE /comanda/:id:", error);
     res.status(500).json({ error: "Erro ao deletar comanda." });
   }
 });

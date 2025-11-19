@@ -9,7 +9,6 @@ const router = Router()
 const categoriaSchema = z.object({
     nome: z.string().min(1, "Nome é obrigatório"),
     descricao: z.string().optional(),
-    empresaId: z.string().min(1, "empresaId é obrigatório")
 })
 
 // rota get

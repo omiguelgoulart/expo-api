@@ -20,34 +20,13 @@ enum PapelUsuario {
   GARCOM
   COZINHA
 }
-
-model Empresa {
-  id        String    @id @default(uuid())
-  nome      String
-  cnpj      String?   @unique
-  telefone  String?
-  email     String?
-
-  usuarios   Usuario[]
-  categorias Categoria[]
-  produtos   Produto[]
-  comandas   Comanda[]
-
-  criadoEm   DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  @@map("empresas")
-}
-
+ 
 model Usuario {
   id        String       @id @default(uuid())
   nome      String
   email     String       @unique
   senha     String
   papel     PapelUsuario @default(FUNCIONARIO)
-
-  empresaId String
-  empresa   Empresa      @relation(fields: [empresaId], references: [id])
 
   comandas  Comanda[]    @relation("ComandasDoUsuario")
 
@@ -62,12 +41,9 @@ model Categoria {
   nome      String
   descricao String?
 
-  empresaId String
-  empresa   Empresa  @relation(fields: [empresaId], references: [id])
-
   produtos  Produto[] @relation("CategoriaProdutos")
 
-  @@unique([empresaId, nome])
+  @@unique([ nome])
 
   @@map("categorias")
 }
@@ -81,8 +57,6 @@ model Produto {
   ativo       Boolean   @default(true)
   imagem      String?
 
-  empresaId   String
-  empresa     Empresa   @relation(fields: [empresaId], references: [id])
 
   categoriaId Int
   categoria   Categoria @relation("CategoriaProdutos", fields: [categoriaId], references: [id])
@@ -103,8 +77,6 @@ model Comanda {
   data        DateTime       @default(now())
   status      StatusComanda  @default(ABERTA)
 
-  empresaId   String
-  empresa     Empresa        @relation(fields: [empresaId], references: [id])
 
   // opcional: usuário responsável pela comanda (garçom)
   usuarioId   String?

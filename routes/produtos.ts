@@ -14,7 +14,6 @@ const produtoSchema = z.object({
   ativo: z.boolean().default(true),
   imagem: z.string().url().optional(),
   categoriaId: z.number().int(), 
-  empresaId: z.string().min(1),  
 })
 
 router.get("", async (req, res) => {
@@ -28,86 +27,53 @@ router.get("", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    const parsed = produtoSchema.parse(req.body)
-    const { categoriaId, preco, empresaId, ...rest } = parsed
-
-    const data: Prisma.ProdutoCreateInput = {
-      ...rest,
-      preco: new Prisma.Decimal(preco),
-      categoria: { connect: { id: categoriaId } },
-      empresa: { connect: { id: empresaId } },
+    const novaData = produtoSchema.parse(req.body)
+    const data = {
+      ...novaData,
+      preco: new Prisma.Decimal(novaData.preco),
     }
-
     const novoProduto = await prisma.produto.create({ data })
     return res.status(201).json(novoProduto)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        message: "Dados inválidos.",
-        errors: error.errors,
-      })
+      return res.status(400).json({ errors: error.errors })
     }
-    return res.status(500).json({
-      message: "Erro ao criar produto.",
-      error: String((error as any)?.message ?? error),
-    })
+    return res.status(500).json({ error: "Erro ao criar produto." })
   }
 })
 
-router.patch("/alterar/:id", async (req, res) => {
+router.patch("/:id", async (req, res) => {
   const { id } = req.params
-
   try {
-    const parsed = produtoSchema.partial().parse(req.body)
-    const { categoriaId, preco, empresaId, ...rest } = parsed
-
-    const data: Prisma.ProdutoUpdateInput = {
-      ...rest,
-      ...(preco !== undefined && { preco: new Prisma.Decimal(preco) }),
-      ...(categoriaId !== undefined && {
-        categoria: { connect: { id: categoriaId } },
-      }),
-      ...(empresaId !== undefined && {
-        empresa: { connect: { id: empresaId } },
-      }),
+    const parsedData = produtoSchema.partial().parse(req.body)
+    const data: any = {
+      ...parsedData,
     }
-
+    if (parsedData.preco !== undefined) {
+      data.preco = new Prisma.Decimal(parsedData.preco)
+    }
     const produtoAtualizado = await prisma.produto.update({
       where: { id },
       data,
     })
-
     return res.json(produtoAtualizado)
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors })
     }
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
-      return res.status(404).json({ error: "Produto não encontrado." })
-    }
     return res.status(500).json({ error: "Erro ao atualizar produto." })
   }
 })
 
-router.delete("/excluir/:id", async (req, res) => {
+router.delete("/:id", async (req, res) => {
   const { id } = req.params
-
   try {
     await prisma.produto.delete({
       where: { id },
     })
-    return res.status(204).send()
+    return res.status(200).json({ message: "Produto removido com sucesso." })
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
-      return res.status(404).json({ error: "Produto não encontrado." })
-    }
-    return res.status(500).json({ error: "Erro ao remover produto." })
+    return res.status(500).json({ error: "Erro ao deletar produto." })
   }
 })
 

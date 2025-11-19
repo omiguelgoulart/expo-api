@@ -11,7 +11,6 @@ const usuarioSchema = z.object({
     email: z.string(),
     senha: z.string(),
     papel: z.nativeEnum(PapelUsuario),
-    empresaId: z.string(),
   })
   
   function validaSenha(senha: string) {

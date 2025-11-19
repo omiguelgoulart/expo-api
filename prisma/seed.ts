@@ -6,20 +6,6 @@ async function main() {
   console.log("🌱 Iniciando seed...");
 
   // -------------------------------
-  // Empresa
-  // -------------------------------
-  const empresa = await prisma.empresa.create({
-    data: {
-      nome: "Restaurante Sabor Caseiro",
-      cnpj: "12.345.678/0001-99",
-      telefone: "(51) 99999-9999",
-      email: "contato@saborcaseiro.com",
-    },
-  });
-
-  console.log("✔ Empresa criada:", empresa.nome);
-
-  // -------------------------------
   // Usuários
   // -------------------------------
   const admin = await prisma.usuario.create({
@@ -28,7 +14,6 @@ async function main() {
       email: "admin@saborcaseiro.com",
       senha: "123456", // coloque hash futuramente
       papel: "ADMIN",
-      empresaId: empresa.id,
     },
   });
 
@@ -38,7 +23,6 @@ async function main() {
       email: "garcom@saborcaseiro.com",
       senha: "123456",
       papel: "GARCOM",
-      empresaId: empresa.id,
     },
   });
 
@@ -48,7 +32,6 @@ async function main() {
       email: "func@saborcaseiro.com",
       senha: "123456",
       papel: "FUNCIONARIO",
-      empresaId: empresa.id,
     },
   });
 
@@ -57,20 +40,20 @@ async function main() {
   // -------------------------------
   // Categorias
   // -------------------------------
-  const categorias = await prisma.categoria.createMany({
+  await prisma.categoria.createMany({
     data: [
-      { nome: "Bebidas", descricao: "Refrigerantes, sucos e água", empresaId: empresa.id },
-      { nome: "Lanches", descricao: "Xis, hambúrguer e porções", empresaId: empresa.id },
-      { nome: "Pratos", descricao: "Pratos executivos e refeições", empresaId: empresa.id },
+      { nome: "Bebidas", descricao: "Refrigerantes, sucos e água" },
+      { nome: "Lanches", descricao: "Xis, hambúrguer e porções" },
+      { nome: "Pratos", descricao: "Pratos executivos e refeições" },
     ],
   });
 
   console.log("✔ Categorias criadas");
 
   // Buscar categorias para vincular produtos
-  const bebidas = await prisma.categoria.findFirst({ where: { nome: "Bebidas", empresaId: empresa.id } });
-  const lanches = await prisma.categoria.findFirst({ where: { nome: "Lanches", empresaId: empresa.id } });
-  const pratos  = await prisma.categoria.findFirst({ where: { nome: "Pratos", empresaId: empresa.id } });
+  const bebidas = await prisma.categoria.findFirst({ where: { nome: "Bebidas" } });
+  const lanches = await prisma.categoria.findFirst({ where: { nome: "Lanches" } });
+  const pratos  = await prisma.categoria.findFirst({ where: { nome: "Pratos" } });
 
   // -------------------------------
   // Produtos
@@ -82,7 +65,6 @@ async function main() {
         descricao: "350ml",
         preco: 6.00,
         estoque: 50,
-        empresaId: empresa.id,
         categoriaId: bebidas!.id,
       },
       {
@@ -90,7 +72,6 @@ async function main() {
         descricao: "500ml",
         preco: 4.00,
         estoque: 40,
-        empresaId: empresa.id,
         categoriaId: bebidas!.id,
       },
       {
@@ -98,7 +79,6 @@ async function main() {
         descricao: "Pão, carne, salada e molho",
         preco: 22.00,
         estoque: 20,
-        empresaId: empresa.id,
         categoriaId: lanches!.id,
       },
       {
@@ -106,7 +86,6 @@ async function main() {
         descricao: "Porção média",
         preco: 18.00,
         estoque: 15,
-        empresaId: empresa.id,
         categoriaId: lanches!.id,
       },
       {
@@ -114,7 +93,6 @@ async function main() {
         descricao: "Arroz, feijão, salada e carne",
         preco: 25.00,
         estoque: 30,
-        empresaId: empresa.id,
         categoriaId: pratos!.id,
       },
       {
@@ -122,7 +100,6 @@ async function main() {
         descricao: "Carne + molho + queijo + arroz + fritas",
         preco: 32.00,
         estoque: 18,
-        empresaId: empresa.id,
         categoriaId: pratos!.id,
       },
     ],
