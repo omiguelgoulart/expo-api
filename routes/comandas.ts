@@ -76,10 +76,12 @@ router.post("/:empresaId", async (req: Request<Pick<ComandaParams, "empresaId">>
   }
 });
 
-router.get("/:id", async (req, res) => {
-   try {
-    const { id } = req.params;
-
+router.get("/detalhe/:id", async (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({ error: "id não informado na rota." });
+  }
+  try {
     const comanda = await prisma.comanda.findUnique({
       where: { id },
       include: {
@@ -88,14 +90,18 @@ router.get("/:id", async (req, res) => {
             produto: true,
           },
         },
+        usuario: true,
+        empresa: true,
       },
     });
+
     if (!comanda) {
       return res.status(404).json({ message: "Comanda não encontrada." });
     }
+
     res.json(comanda);
   } catch (error) {
-    console.error("Erro no GET /comanda/:id:", error);
+    console.error("Erro no GET /comanda/id/:id:", error);
     res.status(500).json({ error: "Erro ao buscar comanda." });
   }
 });
