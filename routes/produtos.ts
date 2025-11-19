@@ -5,20 +5,18 @@ import { z } from "zod"
 const prisma = new PrismaClient()
 const router = Router()
 
-// Schema Zod do produto
+
 const produtoSchema = z.object({
   nome: z.string().min(1),
   descricao: z.string().optional(),
-  preco: z.string(), // ex: "42.90"
+  preco: z.string(), 
   estoque: z.number().int().nonnegative().default(0).optional(),
   ativo: z.boolean().default(true),
   imagem: z.string().url().optional(),
-  categoriaId: z.number().int(), // obrigatório
-  empresaId: z.string().min(1),  // obrigatório
+  categoriaId: z.number().int(), 
+  empresaId: z.string().min(1),  
 })
 
-// 🟢 GET - listar produtos por empresa
-// GET /produtos/:empresaId
 router.get("/:empresaId", async (req, res) => {
   try {
     const { empresaId } = req.params
@@ -40,7 +38,6 @@ router.get("/:empresaId", async (req, res) => {
   }
 })
 
-// 🟢 POST - criar produto
 router.post("/", async (req, res) => {
   try {
     const parsed = produtoSchema.parse(req.body)
@@ -69,7 +66,6 @@ router.post("/", async (req, res) => {
   }
 })
 
-// 🟡 PATCH - atualizar produto
 router.patch("/:id", async (req, res) => {
   const { id } = req.params
 
@@ -108,7 +104,6 @@ router.patch("/:id", async (req, res) => {
   }
 })
 
-// 🔴 DELETE - remover produto
 router.delete("/:id", async (req, res) => {
   const { id } = req.params
 

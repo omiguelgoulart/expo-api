@@ -40,23 +40,17 @@ router.get("/:empresaId", async (req, res) => {
   }
 });
 
-
-router.post("/", async (req: Request<ComandaParams>, res) => {
-  const { empresaId } = req.params
-
+router.post("/", async (req, res) => {
   try {
-    const parsedData = comandaSchema.parse(req.body)
+    const parsed = comandaSchema.parse(req.body)
 
-    const novaComanda = await prisma.comanda.create({
-      data: { ...parsedData, empresaId },
-    })
-
-    res.status(201).json(novaComanda)
+    const novaComanda = await prisma.comanda.create({ data: parsed })
+    return res.status(201).json(novaComanda)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ errors: error.errors })
+      return res.status(400).json({ message: "Dados inválidos.", errors: error.errors })
     }
-    res.status(500).json({ error: "Erro ao criar comanda." })
+    return res.status(500).json({ message: "Erro ao criar comanda.", error: String((error as any)?.message ?? error) })
   }
 })
 
