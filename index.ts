@@ -6,6 +6,8 @@ import produtoRoutes from './routes/produtos';
 import pedidoRoutes from './routes/pedidoItens';
 import comandaRoutes from './routes/comandas';
 
+
+
 import cors from 'cors';
 
 
