@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
-import { Router } from "express";
-import bcrypt from "bcrypt";
+import { Router, Request, Response } from "express";
+import bcrypt from "bcrypt"; // se estiver usando bcryptjs, troque o import
 
 const router = Router();
 
@@ -14,38 +14,62 @@ const prisma = new PrismaClient({
   ],
 });
 
-router.post("/", async (req, res) => {
-  const { email, senha } = req.body;
+router.post("/", async (req: Request, res: Response) => {
+  const { email, senha } = req.body as { email?: string; senha?: string };
 
   const mensaPadrao = "Login ou senha incorretos";
 
+  // validação básica do body
   if (!email || !senha) {
     return res.status(400).json({ erro: mensaPadrao });
   }
 
   try {
+    // busca usuário pelo e-mail
     const usuario = await prisma.usuario.findFirst({
       where: { email },
-      include: {
-        empresa: true, // <- assume que tem relação usuario.empresa
-      },
+      // se você precisar de dados da empresa no response, inclua:
+      // include: { empresa: true },
     });
 
-    if (usuario == null) {
-      return res.status(400).json({ erro: mensaPadrao });
+    if (!usuario) {
+      // usuário não encontrado
+      return res.status(401).json({ erro: mensaPadrao });
     }
 
-    const senhaConfere = bcrypt.compareSync(senha, usuario.senha);
+    // ATENÇÃO: confira se o campo da senha no seu banco é "senha" mesmo
+    // se for "senhaHash" ou algo assim, ajuste aqui.
+    if (!usuario.senha) {
+      console.error(
+        "Campo de senha não encontrado no usuário. Verifique o schema/coluna."
+      );
+      return res.status(500).json({
+        erro: "Configuração de senha inválida no servidor",
+      });
+    }
+
+    // compara a senha informada com o hash salvo
+    const senhaConfere = await bcrypt.compare(senha, usuario.senha);
 
     if (!senhaConfere) {
-      return res.status(400).json({ erro: mensaPadrao });
+      return res.status(401).json({ erro: mensaPadrao });
     }
 
     // papel do usuário - no app vai ser sempre FUNCIONARIO (ajustado no cadastro)
-    const papel = (usuario as any).papel ?? (usuario as any).role ?? "FUNCIONARIO";
+    const papel =
+      (usuario as any).papel ?? (usuario as any).role ?? "FUNCIONARIO";
 
+    // se você realmente precisar desses valores, pode mandar no response
     const empresaId = (usuario as any).empresaId ?? null;
     const empresaNome = (usuario as any).empresa?.nome ?? null;
+
+    const jwtKey = process.env.JWT_KEY;
+    if (!jwtKey) {
+      console.error("JWT_KEY não configurado nas variáveis de ambiente.");
+      return res
+        .status(500)
+        .json({ erro: "Configuração do servidor inválida (JWT)." });
+    }
 
     const token = jwt.sign(
       {
@@ -54,7 +78,7 @@ router.post("/", async (req, res) => {
         papel,
         empresaId,
       },
-      process.env.JWT_KEY as string,
+      jwtKey,
       { expiresIn: "8h" }
     );
 
