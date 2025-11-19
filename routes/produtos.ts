@@ -17,7 +17,7 @@ const produtoSchema = z.object({
   empresaId: z.string().min(1),  
 })
 
-router.get("/:empresaId", async (req, res) => {
+router.get("/lista/:empresaId", async (req, res) => {
   try {
     const { empresaId } = req.params
 
@@ -66,7 +66,7 @@ router.post("/", async (req, res) => {
   }
 })
 
-router.patch("/:id", async (req, res) => {
+router.patch("/alterar/:id", async (req, res) => {
   const { id } = req.params
 
   try {
@@ -104,7 +104,7 @@ router.patch("/:id", async (req, res) => {
   }
 })
 
-router.delete("/:id", async (req, res) => {
+router.delete("/excluir/:id", async (req, res) => {
   const { id } = req.params
 
   try {
