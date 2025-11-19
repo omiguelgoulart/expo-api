@@ -10,7 +10,7 @@ const router = Router()
 const pedidoItemSchema = z.object({
     comanda: z.number().optional(),
     quantidade: z.number().int().nonnegative().default(1),
-    produtoId: z.number().int(),
+    produtoId: z.string(),
     observacoes: z.string().optional(),
 })
 
