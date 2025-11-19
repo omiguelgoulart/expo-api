@@ -17,11 +17,8 @@ const comandaSchema = z.object({
   data: z.string().optional(),
   status: z.enum(["ABERTA", "FECHADA", "CANCELADA", "PENDENTE"]).default("ABERTA").optional(),
   usuarioId: z.string().optional(),
+  empresaId: z.string(), 
 })
-
-interface AuthenticatedRequest extends Request {
-    user?: { empresaId?: string }
-}
 
 router.get("/:empresaId", async (req, res) => {
   const { empresaId } = req.params;
