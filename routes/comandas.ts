@@ -21,7 +21,7 @@ const comandaSchema = z.object({
 });
 
 
-router.get("/:empresaId", async (req: Request<Pick<ComandaParams, "empresaId">>, res) => {
+router.get("/listar/:empresaId", async (req: Request<Pick<ComandaParams, "empresaId">>, res) => {
   const { empresaId } = req.params;
 
   if (!empresaId) {
@@ -48,7 +48,7 @@ router.get("/:empresaId", async (req: Request<Pick<ComandaParams, "empresaId">>,
   }
 });
 
-router.post("/:empresaId", async (req: Request<Pick<ComandaParams, "empresaId">>, res) => {
+router.post("/post/:empresaId", async (req: Request<Pick<ComandaParams, "empresaId">>, res) => {
   const { empresaId } = req.params;
 
   try {
@@ -106,7 +106,7 @@ router.get("/detalhe/:id", async (req, res) => {
   }
 });
 
-router.patch("/:empresaId/:id", async (req: Request<ComandaParams>, res) => {
+router.patch("/editar/:empresaId/:id", async (req: Request<ComandaParams>, res) => {
   const { id, empresaId } = req.params;
 
   try {
@@ -134,7 +134,7 @@ router.patch("/:empresaId/:id", async (req: Request<ComandaParams>, res) => {
   }
 });
 
-router.delete("/:empresaId/:id", async (req: Request<ComandaParams>, res) => {
+router.delete("/excluir/:empresaId/:id", async (req: Request<ComandaParams>, res) => {
   const { id, empresaId } = req.params;
 
   try {
