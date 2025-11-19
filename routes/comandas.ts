@@ -1,26 +1,27 @@
-import { PrismaClient } from "@prisma/client"
-import { Router, Request } from "express"
-import { z } from "zod"
+import { PrismaClient } from "@prisma/client";
+import { Router, Request } from "express";
+import { z } from "zod";
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
+const router = Router();
 
 interface ComandaParams {
-  empresaId: string
-  id?: string
+  empresaId: string;
+  id: string;
 }
-
-// mergeParams TRUE → permite acessar empresaId vindo da rota pai
-const router = Router({ mergeParams: true })
 
 const comandaSchema = z.object({
   numero: z.string().min(1, "Identificador é obrigatório!!"),
   data: z.string().optional(),
-  status: z.enum(["ABERTA", "FECHADA", "CANCELADA", "PENDENTE"]).default("ABERTA").optional(),
+  status: z
+    .enum(["ABERTA", "FECHADA", "CANCELADA", "PENDENTE"])
+    .default("ABERTA")
+    .optional(),
   usuarioId: z.string().optional(),
-  empresaId: z.string(), 
-})
+});
 
-router.get("/:empresaId", async (req, res) => {
+
+router.get("/:empresaId", async (req: Request<Pick<ComandaParams, "empresaId">>, res) => {
   const { empresaId } = req.params;
 
   if (!empresaId) {
@@ -30,86 +31,131 @@ router.get("/:empresaId", async (req, res) => {
   try {
     const comandas = await prisma.comanda.findMany({
       where: { empresaId },
-      include: { pedidos: { include: { produto: true } } },
+      include: {
+        // aqui "pedidos" já vem com produto
+        pedidos: {
+          include: {
+            produto: true,
+          },
+        },
+      },
     });
 
     res.json(comandas);
   } catch (error) {
-    console.error("Erro no GET /comandas/:empresaId:", error);
+    console.error("Erro no GET /comanda/:empresaId:", error);
     res.status(500).json({ error: "Erro ao buscar comandas." });
   }
 });
 
-router.post("/", async (req, res) => {
-  try {
-    const parsed = comandaSchema.parse(req.body)
+router.post("/:empresaId", async (req: Request<Pick<ComandaParams, "empresaId">>, res) => {
+  const { empresaId } = req.params;
 
-    const novaComanda = await prisma.comanda.create({ data: parsed })
-    return res.status(201).json(novaComanda)
+  try {
+    const parsedBody = comandaSchema.parse(req.body);
+
+    const novaComanda = await prisma.comanda.create({
+      data: {
+        ...parsedBody,
+        empresaId, // sempre forçando empresa da rota
+      },
+    });
+
+    return res.status(201).json(novaComanda);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Dados inválidos.", errors: error.errors })
+      return res
+        .status(400)
+        .json({ message: "Dados inválidos.", errors: error.errors });
     }
-    return res.status(500).json({ message: "Erro ao criar comanda.", error: String((error as any)?.message ?? error) })
+    console.error("Erro no POST /comanda/:empresaId:", error);
+    return res.status(500).json({
+      message: "Erro ao criar comanda.",
+      error: String((error as any)?.message ?? error),
+    });
   }
-})
+});
 
-router.patch("/:id", async (req: Request<ComandaParams>, res) => {
-  const { id, empresaId } = req.params
+router.get("/:empresaId/:id", async (req: Request<ComandaParams>, res) => {
+  const { id, empresaId } = req.params;
 
   try {
-    const parsedData = comandaSchema.partial().parse(req.body)
+    const comanda = await prisma.comanda.findFirst({
+      where: {
+        id,
+        empresaId,
+      },
+      include: {
+        pedidos: {
+          include: {
+            produto: true,
+          },
+        },
+      },
+    });
 
-    const existe = await prisma.comanda.findUnique({ where: { id } })
-    if (!existe || existe.empresaId !== empresaId) {
-      return res.status(404).json({ message: "Comanda não encontrada para esta empresa." })
+    if (!comanda) {
+      return res
+        .status(404)
+        .json({ message: "Comanda não encontrada para esta empresa." });
+    }
+
+    res.json(comanda);
+  } catch (error) {
+    console.error("Erro no GET /comanda/:empresaId/:id:", error);
+    res.status(500).json({ error: "Erro ao buscar comanda." });
+  }
+});
+
+router.patch("/:empresaId/:id", async (req: Request<ComandaParams>, res) => {
+  const { id, empresaId } = req.params;
+
+  try {
+    const parsedData = comandaSchema.partial().parse(req.body);
+
+    const existe = await prisma.comanda.findFirst({
+      where: { id, empresaId },
+    });
+
+    if (!existe) {
+      return res
+        .status(404)
+        .json({ message: "Comanda não encontrada para esta empresa." });
     }
 
     const comandaAtualizada = await prisma.comanda.update({
       where: { id },
       data: parsedData,
-    })
+    });
 
-    res.json(comandaAtualizada)
+    res.json(comandaAtualizada);
   } catch (error) {
-    res.status(500).json({ error: "Erro ao atualizar comanda." })
+    console.error("Erro no PATCH /comanda/:empresaId/:id:", error);
+    res.status(500).json({ error: "Erro ao atualizar comanda." });
   }
-})
+});
 
-router.delete("/:id", async (req: Request<ComandaParams>, res) => {
-  const { id, empresaId } = req.params
+router.delete("/:empresaId/:id", async (req: Request<ComandaParams>, res) => {
+  const { id, empresaId } = req.params;
 
   try {
-    const existe = await prisma.comanda.findUnique({ where: { id } })
-    if (!existe || existe.empresaId !== empresaId) {
-      return res.status(404).json({ message: "Comanda não encontrada para esta empresa." })
+    const existe = await prisma.comanda.findFirst({
+      where: { id, empresaId },
+    });
+
+    if (!existe) {
+      return res
+        .status(404)
+        .json({ message: "Comanda não encontrada para esta empresa." });
     }
 
-    await prisma.comanda.delete({ where: { id } })
+    await prisma.comanda.delete({ where: { id } });
 
-    res.status(204).send()
+    res.status(204).send();
   } catch (error) {
-    res.status(500).json({ error: "Erro ao deletar comanda." })
+    console.error("Erro no DELETE /comanda/:empresaId/:id:", error);
+    res.status(500).json({ error: "Erro ao deletar comanda." });
   }
-})
+});
 
-router.get("/:id", async (req: Request<ComandaParams>, res) => {
-  const { id, empresaId } = req.params
-
-  try {
-    const comanda = await prisma.comanda.findUnique({
-      where: { id },
-      include: { pedidos: { include: { produto: true } } },
-    })
-
-    if (!comanda || comanda.empresaId !== empresaId) {
-      return res.status(404).json({ message: "Comanda não encontrada para esta empresa." })
-    }
-
-    res.json(comanda)
-  } catch (error) {
-    res.status(500).json({ error: "Erro ao buscar comanda." })
-  }
-})
-
-export default router
+export default router;
