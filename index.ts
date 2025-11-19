@@ -1,6 +1,5 @@
 import express from 'express';
 import categoriaRoutes from './routes/categorias';
-import empresaRoutes from './routes/empresa';
 import usuarioRoutes from './routes/usuarios';
 import loginRoutes from './routes/login';
 import produtoRoutes from './routes/produtos';
